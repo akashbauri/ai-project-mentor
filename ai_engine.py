@@ -1,110 +1,91 @@
 from groq import Groq
 import streamlit as st
 
-# Initialize Groq client
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 
-def clean_text(text):
-    """
-    Clean extracted text and limit size to avoid token overflow.
-    """
-    text = text.replace("\n", " ")
+def split_text(text, chunk_size=2000):
+    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
 
-    if len(text) > 5000:
-        text = text[:5000]
 
-    return text
+def summarize_chunk(chunk):
+
+    prompt = f"""
+Extract important technical skills from this learning material.
+
+Return only skill names separated by commas.
+
+Text:
+{chunk}
+"""
+
+    try:
+
+        completion = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[
+                {"role": "system", "content": "You extract technical skills."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=200
+        )
+
+        return completion.choices[0].message.content
+
+    except:
+
+        return ""
 
 
 def generate_projects(text):
-    """
-    Send learning material to Groq and generate projects.
-    """
 
-    text = clean_text(text)
+    if not text or text.strip() == "":
+        return "No readable learning material found."
 
-    prompt = f"""
-You are a senior software engineer and mentor.
+    chunks = split_text(text)
 
-A learner uploaded learning material from tutorials, PDFs, websites, or videos.
+    skill_summary = ""
 
-Your tasks:
+    for chunk in chunks[:5]:
 
-1. Identify all technical skills mentioned.
-2. Estimate skill proficiency percentages.
-3. Calculate a learner readiness score.
-4. Generate three practical software projects the learner can build.
-5. Provide documentation and working starter code.
+        skills = summarize_chunk(chunk)
 
-Respond using THIS STRUCTURE EXACTLY.
+        skill_summary += skills + "\n"
 
---------------------------------------------------
 
-SKILLS
+    final_prompt = f"""
+A learner studied the following topics:
 
-Python - 80
-Pandas - 70
-Machine Learning - 60
-Data Visualization - 65
+{skill_summary}
 
---------------------------------------------------
+Generate 3 practical software projects they can build.
 
-READINESS_SCORE
+For each project include:
 
-75
-
---------------------------------------------------
-
-PROJECT 1
-
-NAME
-Project Name
-
-DIFFICULTY
-Beginner / Intermediate / Advanced
-
+PROJECT NAME
 TOOLS
-Python, Pandas, Scikit-learn
-
 DESCRIPTION
-Short explanation of the project.
-
 DOCUMENTATION
-Step by step explanation of how to build the project.
-
-ARCHITECTURE
-Explain the system architecture.
-
-FOLDER_STRUCTURE
-project/
-  data/
-  src/
-  models/
-
 STARTER_CODE
 
-import pandas as pd
-print("project starter")
-
---------------------------------------------------
-
-Repeat the same structure for PROJECT 2 and PROJECT 3.
-
---------------------------------------------------
-
-Learning material:
-{text}
+Keep explanations concise.
 """
 
-    completion = client.chat.completions.create(
-        model="llama3-70b-8192",
-        messages=[
-            {"role": "system", "content": "You are an expert programming mentor."},
-            {"role": "user", "content": prompt}
-        ],
-        temperature=0.2,
-        max_tokens=1800
-    )
+    try:
 
-    return completion.choices[0].message.content
+        completion = client.chat.completions.create(
+            model="llama3-70b-8192",
+            messages=[
+                {"role": "system", "content": "You help learners build coding projects."},
+                {"role": "user", "content": final_prompt}
+            ],
+            temperature=0.2,
+            max_tokens=900
+        )
+
+        return completion.choices[0].message.content
+
+    except Exception as e:
+
+        return f"AI generation failed: {str(e)}"
