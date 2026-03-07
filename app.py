@@ -14,65 +14,63 @@ st.title("AI Project Mentor")
 
 st.markdown("### Created by Akash Bauri")
 
-st.write(
-"""
-Upload learning materials and the AI will generate projects.
-
-Supported inputs:
-- PDF
-- Word (DOCX)
-- PowerPoint (PPTX)
-- Website links
-- YouTube tutorials
-"""
-)
-
-st.info("Maximum file size allowed: **5 MB per file**")
+st.info("Maximum file size: 5 MB per file")
 
 
-# ----------------------------
-# FILE UPLOAD SECTION
-# ----------------------------
+def detect_skills(text):
 
-st.subheader("Upload Learning Files")
+    skill_keywords = {
+        "Python": ["python"],
+        "Pandas": ["pandas"],
+        "NumPy": ["numpy"],
+        "Machine Learning": ["machine learning","scikit","sklearn"],
+        "Data Visualization": ["matplotlib","seaborn"],
+        "SQL": ["sql"],
+        "Deep Learning": ["deep learning","tensorflow","pytorch"]
+    }
+
+    text = text.lower()
+
+    scores = {}
+
+    for skill, keywords in skill_keywords.items():
+
+        count = 0
+
+        for k in keywords:
+
+            count += text.count(k)
+
+        if count > 0:
+
+            scores[skill] = count
+
+    if scores:
+
+        max_score = max(scores.values())
+
+        for skill in scores:
+
+            scores[skill] = int((scores[skill] / max_score) * 100)
+
+    return scores
+
 
 uploaded_files = st.file_uploader(
-    "Upload PDF / Word / PPT files",
-    type=["pdf", "docx", "pptx"],
+    "Upload PDF / Word / PPT",
+    type=["pdf","docx","pptx"],
     accept_multiple_files=True
 )
 
+website_link = st.text_input("Website Link")
 
-# ----------------------------
-# WEBSITE LINK
-# ----------------------------
-
-st.subheader("Website Link")
-
-website_link = st.text_input(
-    "Paste a tutorial website link"
-)
-
-
-# ----------------------------
-# YOUTUBE LINK
-# ----------------------------
-
-st.subheader("YouTube Link")
-
-youtube_link = st.text_input(
-    "Paste a YouTube tutorial link"
-)
+youtube_link = st.text_input("YouTube Link")
 
 
 all_text = ""
 
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_FILE_SIZE = 5 * 1024 * 1024
 
-
-# ----------------------------
-# PROCESS FILES
-# ----------------------------
 
 if uploaded_files:
 
@@ -80,17 +78,14 @@ if uploaded_files:
 
         if file.size > MAX_FILE_SIZE:
 
-            st.error(f"{file.name} exceeds the 5 MB limit.")
+            st.error(f"{file.name} exceeds 5 MB")
+
             st.stop()
 
         text = extract_text(file)
 
         all_text += text + " "
 
-
-# ----------------------------
-# PROCESS WEBSITE
-# ----------------------------
 
 if website_link:
 
@@ -99,10 +94,6 @@ if website_link:
     all_text += website_text + " "
 
 
-# ----------------------------
-# PROCESS YOUTUBE
-# ----------------------------
-
 if youtube_link:
 
     youtube_text = extract_from_url(youtube_link)
@@ -110,19 +101,15 @@ if youtube_link:
     all_text += youtube_text + " "
 
 
-# ----------------------------
-# ANALYZE BUTTON
-# ----------------------------
-
 if st.button("Analyze Learning Material"):
 
     if all_text.strip() == "":
 
-        st.warning("Please upload files or paste links.")
+        st.warning("Upload files or paste links.")
 
     else:
 
-        with st.spinner("Analyzing learning material with AI..."):
+        with st.spinner("Analyzing learning material..."):
 
             result = generate_projects(all_text)
 
@@ -131,43 +118,20 @@ if st.button("Analyze Learning Material"):
         st.markdown(result)
 
 
-        # ----------------------------
-        # SKILL DASHBOARD
-        # ----------------------------
-
-        skills = {}
-
-        lines = result.split("\n")
-
-        for line in lines:
-
-            if "-" in line:
-
-                parts = line.split("-")
-
-                if len(parts) == 2:
-
-                    skill = parts[0].strip()
-
-                    try:
-                        score = int(parts[1].strip())
-                        skills[skill] = score
-                    except:
-                        pass
-
+        skills = detect_skills(all_text)
 
         if skills:
 
             df = pd.DataFrame(
                 list(skills.items()),
-                columns=["Skill", "Score"]
+                columns=["Skill","Score"]
             )
 
             fig = px.bar(
                 df,
                 x="Skill",
                 y="Score",
-                title="Detected Technical Skills"
+                title="Detected Skills"
             )
 
             st.subheader("Skill Dashboard")
@@ -175,29 +139,21 @@ if st.button("Analyze Learning Material"):
             st.plotly_chart(fig, use_container_width=True)
 
 
-        # ----------------------------
-        # DOWNLOAD PDF
-        # ----------------------------
+        pdf_file = create_pdf(result,"project_documentation.pdf")
 
-        pdf_file = create_pdf(result, "project_documentation.pdf")
-
-        with open(pdf_file, "rb") as file:
+        with open(pdf_file,"rb") as file:
 
             st.download_button(
-                "Download Project Documentation (PDF)",
+                "Download Project Documentation",
                 data=file,
                 file_name="project_documentation.pdf",
                 mime="application/pdf"
             )
 
 
-        # ----------------------------
-        # DOWNLOAD REPO
-        # ----------------------------
-
         repo_zip = create_repo_zip("ai_generated_project")
 
-        with open(repo_zip, "rb") as file:
+        with open(repo_zip,"rb") as file:
 
             st.download_button(
                 "Download GitHub Repository",
