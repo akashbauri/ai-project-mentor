@@ -4,38 +4,34 @@ import streamlit as st
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 
-def split_text(text, chunk_size=2000):
-    return [text[i:i + chunk_size] for i in range(0, len(text), chunk_size)]
+def extract_skills_locally(text):
 
+    skill_keywords = {
+        "Python": ["python"],
+        "Pandas": ["pandas"],
+        "NumPy": ["numpy"],
+        "Machine Learning": ["machine learning","scikit","sklearn"],
+        "Data Visualization": ["matplotlib","seaborn"],
+        "SQL": ["sql"],
+        "Deep Learning": ["deep learning","tensorflow","pytorch"],
+        "Statistics": ["statistics","probability"]
+    }
 
-def summarize_chunk(chunk):
+    text = text.lower()
 
-    prompt = f"""
-Extract important technical skills from this learning material.
+    detected = []
 
-Return only skill names separated by commas.
+    for skill, keywords in skill_keywords.items():
 
-Text:
-{chunk}
-"""
+        for k in keywords:
 
-    try:
+            if k in text:
 
-        completion = client.chat.completions.create(
-            model="llama3-70b-8192",
-            messages=[
-                {"role": "system", "content": "You extract technical skills."},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.2,
-            max_tokens=200
-        )
+                detected.append(skill)
 
-        return completion.choices[0].message.content
+                break
 
-    except:
-
-        return ""
+    return detected
 
 
 def generate_projects(text):
@@ -43,19 +39,12 @@ def generate_projects(text):
     if not text or text.strip() == "":
         return "No readable learning material found."
 
-    chunks = split_text(text)
+    skills = extract_skills_locally(text)
 
-    skill_summary = ""
+    skill_summary = ", ".join(skills)
 
-    for chunk in chunks[:5]:
-
-        skills = summarize_chunk(chunk)
-
-        skill_summary += skills + "\n"
-
-
-    final_prompt = f"""
-A learner studied the following topics:
+    prompt = f"""
+A learner studied these topics:
 
 {skill_summary}
 
@@ -75,12 +64,12 @@ Keep explanations concise.
     try:
 
         completion = client.chat.completions.create(
-            model="llama3-70b-8192",
+            model="llama-3.3-70b-versatile",
             messages=[
                 {"role": "system", "content": "You help learners build coding projects."},
-                {"role": "user", "content": final_prompt}
+                {"role": "user", "content": prompt}
             ],
-            temperature=0.2,
+            temperature=0,
             max_tokens=900
         )
 
