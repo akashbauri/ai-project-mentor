@@ -1,9 +1,9 @@
 from PyPDF2 import PdfReader
 import docx
+from pptx import Presentation
 import requests
 from bs4 import BeautifulSoup
 from youtube_transcript_api import YouTubeTranscriptApi
-from pptx import Presentation
 
 
 def extract_text(file):
@@ -12,9 +12,6 @@ def extract_text(file):
 
     try:
 
-        # -------------------------
-        # PDF
-        # -------------------------
         if file.type == "application/pdf":
 
             reader = PdfReader(file)
@@ -27,9 +24,6 @@ def extract_text(file):
                     text += page_text + " "
 
 
-        # -------------------------
-        # WORD DOCX
-        # -------------------------
         elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
 
             doc = docx.Document(file)
@@ -38,9 +32,6 @@ def extract_text(file):
                 text += para.text + " "
 
 
-        # -------------------------
-        # POWERPOINT
-        # -------------------------
         elif file.type == "application/vnd.openxmlformats-officedocument.presentationml.presentation":
 
             presentation = Presentation(file)
@@ -52,9 +43,9 @@ def extract_text(file):
                     if hasattr(shape, "text"):
                         text += shape.text + " "
 
-    except Exception as e:
+    except:
 
-        text = ""
+        pass
 
     return text
 
@@ -66,9 +57,6 @@ def extract_from_url(url):
 
     try:
 
-        # -------------------------
-        # YOUTUBE
-        # -------------------------
         if "youtube.com" in url or "youtu.be" in url:
 
             if "v=" in url:
@@ -81,13 +69,9 @@ def extract_from_url(url):
             for t in transcript:
                 text += t["text"] + " "
 
-
-        # -------------------------
-        # WEBSITE
-        # -------------------------
         else:
 
-            response = requests.get(url, timeout=10)
+            response = requests.get(url)
 
             soup = BeautifulSoup(response.text, "html.parser")
 
@@ -96,8 +80,8 @@ def extract_from_url(url):
             for p in paragraphs:
                 text += p.get_text() + " "
 
-    except Exception:
+    except:
 
-        text = ""
+        pass
 
     return text
