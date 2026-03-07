@@ -8,41 +8,24 @@ from pdf_generator import create_pdf
 from repo_generator import create_repo_zip
 
 
+st.set_page_config(layout="wide")
+
 st.title("AI Project Mentor")
 
 st.markdown("### Created by Akash Bauri")
 
-st.write(
-"""
-Upload learning materials or tutorial links.
 
-The system will:
-
-• detect technical skills  
-• calculate readiness score  
-• generate 3 projects  
-• provide documentation and starter code
-"""
-)
-
-
-# ----------------------------------
-# FILE INPUT SECTION
-# ----------------------------------
-
+# FILE UPLOAD
 st.subheader("Upload Learning Files")
 
 uploaded_files = st.file_uploader(
-    "Upload PPT, PDF, or Word files",
+    "Upload PPT / PDF / Word",
     type=["pdf","docx","pptx"],
     accept_multiple_files=True
 )
 
 
-# ----------------------------------
-# WEBSITE INPUT
-# ----------------------------------
-
+# WEBSITE
 st.subheader("Website Link")
 
 website_link = st.text_input(
@@ -50,10 +33,7 @@ website_link = st.text_input(
 )
 
 
-# ----------------------------------
-# YOUTUBE INPUT
-# ----------------------------------
-
+# YOUTUBE
 st.subheader("YouTube Link")
 
 youtube_link = st.text_input(
@@ -64,7 +44,6 @@ youtube_link = st.text_input(
 all_text = ""
 
 
-# Extract from uploaded files
 if uploaded_files:
 
     for file in uploaded_files:
@@ -74,7 +53,6 @@ if uploaded_files:
         all_text += text + " "
 
 
-# Extract website text
 if website_link:
 
     website_text = extract_from_url(website_link)
@@ -82,17 +60,12 @@ if website_link:
     all_text += website_text + " "
 
 
-# Extract youtube transcript
 if youtube_link:
 
     youtube_text = extract_from_url(youtube_link)
 
     all_text += youtube_text + " "
 
-
-# ----------------------------------
-# ANALYZE BUTTON
-# ----------------------------------
 
 if st.button("Analyze Learning Material"):
 
@@ -106,83 +79,52 @@ if st.button("Analyze Learning Material"):
 
             result = generate_projects(all_text)
 
-
-        # ----------------------------------
-        # SKILL DASHBOARD
-        # ----------------------------------
-
-        skills = result.get("skills",{})
-
-        df = pd.DataFrame(
-            list(skills.items()),
-            columns=["Skill","Percentage"]
-        )
-
-        fig = px.bar(
-            df,
-            x="Skill",
-            y="Percentage",
-            title="Detected Skills"
-        )
-
-        st.subheader("Skill Dashboard")
-
-        st.plotly_chart(fig)
+        st.markdown(result)
 
 
-        # ----------------------------------
-        # READINESS SCORE
-        # ----------------------------------
+        # Skill Dashboard
+        skills = {}
 
-        readiness = result.get("readiness_score",50)
+        lines = result.split("\n")
 
-        st.subheader("Project Readiness Score")
+        for line in lines:
 
-        st.progress(readiness/100)
+            if "-" in line:
 
-        st.write(f"Score: {readiness}%")
+                parts = line.split("-")
 
+                if len(parts) == 2:
 
-        # ----------------------------------
-        # PROJECT OUTPUT
-        # ----------------------------------
+                    skill = parts[0].strip()
 
-        st.subheader("Generated Projects")
-
-        for p in result["projects"]:
-
-            st.markdown(f"### {p['name']}")
-
-            st.write("Difficulty:",p["difficulty"])
-
-            st.write("Tools:",", ".join(p["tools"]))
-
-            st.write("Description:",p["description"])
-
-            st.write("Documentation")
-
-            st.write(p["documentation"])
-
-            st.write("Architecture")
-
-            st.code(p["architecture"])
-
-            st.write("Folder Structure")
-
-            st.code(p["folder_structure"])
-
-            st.write("Starter Code")
-
-            st.code(p["starter_code"],language="python")
-
-            st.divider()
+                    try:
+                        score = int(parts[1].strip())
+                        skills[skill] = score
+                    except:
+                        pass
 
 
-        # ----------------------------------
-        # DOWNLOADS
-        # ----------------------------------
+        if skills:
 
-        pdf_file = create_pdf(str(result),"project_documentation.pdf")
+            df = pd.DataFrame(
+                list(skills.items()),
+                columns=["Skill","Score"]
+            )
+
+            fig = px.bar(
+                df,
+                x="Skill",
+                y="Score",
+                title="Detected Skills"
+            )
+
+            st.subheader("Skill Dashboard")
+
+            st.plotly_chart(fig)
+
+
+        # PDF DOWNLOAD
+        pdf_file = create_pdf(result,"project_documentation.pdf")
 
         with open(pdf_file,"rb") as file:
 
@@ -194,6 +136,7 @@ if st.button("Analyze Learning Material"):
             )
 
 
+        # REPO DOWNLOAD
         repo_zip = create_repo_zip("ai_generated_project")
 
         with open(repo_zip,"rb") as file:
