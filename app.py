@@ -8,50 +8,89 @@ from pdf_generator import create_pdf
 from repo_generator import create_repo_zip
 
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="AI Project Mentor", layout="wide")
 
 st.title("AI Project Mentor")
 
 st.markdown("### Created by Akash Bauri")
 
+st.write(
+"""
+Upload learning materials and the AI will generate projects.
 
-# FILE UPLOAD
+Supported inputs:
+- PDF
+- Word (DOCX)
+- PowerPoint (PPTX)
+- Website links
+- YouTube tutorials
+"""
+)
+
+st.info("Maximum file size allowed: **5 MB per file**")
+
+
+# ----------------------------
+# FILE UPLOAD SECTION
+# ----------------------------
+
 st.subheader("Upload Learning Files")
 
 uploaded_files = st.file_uploader(
-    "Upload PPT / PDF / Word",
-    type=["pdf","docx","pptx"],
+    "Upload PDF / Word / PPT files",
+    type=["pdf", "docx", "pptx"],
     accept_multiple_files=True
 )
 
 
-# WEBSITE
+# ----------------------------
+# WEBSITE LINK
+# ----------------------------
+
 st.subheader("Website Link")
 
 website_link = st.text_input(
-    "Paste website tutorial link"
+    "Paste a tutorial website link"
 )
 
 
-# YOUTUBE
+# ----------------------------
+# YOUTUBE LINK
+# ----------------------------
+
 st.subheader("YouTube Link")
 
 youtube_link = st.text_input(
-    "Paste YouTube tutorial link"
+    "Paste a YouTube tutorial link"
 )
 
 
 all_text = ""
 
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+
+# ----------------------------
+# PROCESS FILES
+# ----------------------------
 
 if uploaded_files:
 
     for file in uploaded_files:
 
+        if file.size > MAX_FILE_SIZE:
+
+            st.error(f"{file.name} exceeds the 5 MB limit.")
+            st.stop()
+
         text = extract_text(file)
 
         all_text += text + " "
 
+
+# ----------------------------
+# PROCESS WEBSITE
+# ----------------------------
 
 if website_link:
 
@@ -60,12 +99,20 @@ if website_link:
     all_text += website_text + " "
 
 
+# ----------------------------
+# PROCESS YOUTUBE
+# ----------------------------
+
 if youtube_link:
 
     youtube_text = extract_from_url(youtube_link)
 
     all_text += youtube_text + " "
 
+
+# ----------------------------
+# ANALYZE BUTTON
+# ----------------------------
 
 if st.button("Analyze Learning Material"):
 
@@ -75,14 +122,19 @@ if st.button("Analyze Learning Material"):
 
     else:
 
-        with st.spinner("Analyzing with AI..."):
+        with st.spinner("Analyzing learning material with AI..."):
 
             result = generate_projects(all_text)
+
+        st.subheader("AI Generated Projects")
 
         st.markdown(result)
 
 
-        # Skill Dashboard
+        # ----------------------------
+        # SKILL DASHBOARD
+        # ----------------------------
+
         skills = {}
 
         lines = result.split("\n")
@@ -108,38 +160,44 @@ if st.button("Analyze Learning Material"):
 
             df = pd.DataFrame(
                 list(skills.items()),
-                columns=["Skill","Score"]
+                columns=["Skill", "Score"]
             )
 
             fig = px.bar(
                 df,
                 x="Skill",
                 y="Score",
-                title="Detected Skills"
+                title="Detected Technical Skills"
             )
 
             st.subheader("Skill Dashboard")
 
-            st.plotly_chart(fig)
+            st.plotly_chart(fig, use_container_width=True)
 
 
-        # PDF DOWNLOAD
-        pdf_file = create_pdf(result,"project_documentation.pdf")
+        # ----------------------------
+        # DOWNLOAD PDF
+        # ----------------------------
 
-        with open(pdf_file,"rb") as file:
+        pdf_file = create_pdf(result, "project_documentation.pdf")
+
+        with open(pdf_file, "rb") as file:
 
             st.download_button(
-                "Download Project Documentation",
+                "Download Project Documentation (PDF)",
                 data=file,
                 file_name="project_documentation.pdf",
                 mime="application/pdf"
             )
 
 
-        # REPO DOWNLOAD
+        # ----------------------------
+        # DOWNLOAD REPO
+        # ----------------------------
+
         repo_zip = create_repo_zip("ai_generated_project")
 
-        with open(repo_zip,"rb") as file:
+        with open(repo_zip, "rb") as file:
 
             st.download_button(
                 "Download GitHub Repository",
