@@ -13,14 +13,14 @@ st.title("AI Project Mentor")
 st.markdown("""
 ### Created by **Akash Bauri**
 
-AI Project Mentor converts learning material into **real projects**.
+AI Project Mentor converts learning material into **real-world projects**.
 
 Upload study material or paste a tutorial link and the system will:
 
 • Detect skills  
 • Generate project ideas  
-• Show skill dashboard  
-• Calculate **Project Readiness Score**  
+• Show AI-powered skill dashboard  
+• Calculate Project Readiness Score  
 • Provide starter code  
 • Generate GitHub repository  
 • Export project documentation
@@ -37,14 +37,18 @@ url_input = st.text_input("Paste a website or YouTube link")
 
 all_text = ""
 
+
+# Extract text from files
 if uploaded_files:
 
     for file in uploaded_files:
 
-        text = extract_text(file)
+        file_text = extract_text(file)
 
-        all_text += text + " "
+        all_text += file_text
 
+
+# Extract text from link
 if url_input:
 
     url_text = extract_from_url(url_input)
@@ -54,8 +58,9 @@ if url_input:
 
 if st.button("Analyze Material"):
 
-    if all_text == "":
-        st.warning("Please upload a file or paste a link.")
+    if all_text.strip() == "":
+
+        st.warning("Could not extract text from the file or link.")
 
     else:
 
@@ -63,34 +68,45 @@ if st.button("Analyze Material"):
 
             result = generate_projects(all_text)
 
-        st.subheader("AI Generated Output")
 
-        st.write(result)
-
-        skills = {
-            "Python":80,
-            "Pandas":70,
-            "Machine Learning":60,
-            "Visualization":50
-        }
+        # Skill dashboard
+        skills = result["skills"]
 
         df = pd.DataFrame(list(skills.items()), columns=["Skill","Percentage"])
 
-        fig = px.bar(df,x="Skill",y="Percentage")
+        fig = px.bar(df,x="Skill",y="Percentage",title="Skill Distribution")
 
         st.subheader("Skill Dashboard")
 
         st.plotly_chart(fig)
 
-        readiness_score = 75
+
+        # Readiness score
+        readiness = result["readiness_score"]
 
         st.subheader("Project Readiness Score")
 
-        st.progress(readiness_score/100)
+        st.progress(readiness/100)
 
-        st.write(f"Readiness Score: {readiness_score}%")
+        st.write(f"Readiness Score: {readiness}%")
 
-        pdf_file = create_pdf(result,"project_documentation.pdf")
+
+        # Projects
+        st.subheader("Recommended Projects")
+
+        for p in result["projects"]:
+
+            st.markdown(f"### {p['name']}")
+
+            st.write("Difficulty:",p["difficulty"])
+
+            st.write("Tools:",", ".join(p["tools"]))
+
+            st.write(p["description"])
+
+
+        # Generate PDF
+        pdf_file = create_pdf(str(result),"project_documentation.pdf")
 
         with open(pdf_file,"rb") as file:
 
@@ -101,6 +117,8 @@ if st.button("Analyze Material"):
                 mime="application/pdf"
             )
 
+
+        # Generate GitHub repo
         repo_zip = create_repo_zip("ai_generated_project")
 
         with open(repo_zip,"rb") as file:
