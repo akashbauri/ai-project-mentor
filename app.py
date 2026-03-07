@@ -8,45 +8,30 @@ from pdf_generator import create_pdf
 from repo_generator import create_repo_zip
 
 
-# Page config
-st.set_page_config(
-    page_title="AI Project Mentor",
-    page_icon="🤖",
-    layout="wide"
-)
+st.set_page_config(page_title="AI Project Mentor", layout="wide")
 
-
-# Title
 st.title("AI Project Mentor")
 
-
-# Description
 st.markdown("""
 ### Created by **Akash Bauri**
 
-AI Project Mentor converts learning material into **real-world software projects**.
+Upload learning material (PDF, DOCX, YouTube, Website).
 
-Upload learning material or paste a tutorial link and the system will:
+The AI will:
 
-- Detect technical skills
-- Generate project ideas
-- Show AI-powered skill dashboard
-- Calculate **Project Readiness Score**
-- Provide starter code
-- Generate GitHub repository
-- Export project documentation
+• detect skills  
+• calculate readiness score  
+• generate **3 software projects**  
+• provide **documentation + starter code**  
 """)
 
 
-# File uploader
 uploaded_files = st.file_uploader(
     "Upload learning material (PDF or DOCX)",
-    type=["pdf", "docx"],
+    type=["pdf","docx"],
     accept_multiple_files=True
 )
 
-
-# URL input
 url_input = st.text_input(
     "Or paste a website / YouTube tutorial link"
 )
@@ -55,17 +40,15 @@ url_input = st.text_input(
 all_text = ""
 
 
-# Extract text from uploaded files
 if uploaded_files:
 
     for file in uploaded_files:
 
-        file_text = extract_text(file)
+        text = extract_text(file)
 
-        all_text += file_text + " "
+        all_text += text + " "
 
 
-# Extract text from URL
 if url_input:
 
     url_text = extract_from_url(url_input)
@@ -73,23 +56,22 @@ if url_input:
     all_text += url_text + " "
 
 
-# Analyze button
 if st.button("Analyze Learning Material"):
 
     if all_text.strip() == "":
 
-        st.warning("Please upload a document or paste a tutorial link.")
+        st.warning("Please upload a file or paste a link.")
 
     else:
 
-        with st.spinner("Analyzing learning material using AI..."):
+        with st.spinner("AI analyzing material..."):
 
             result = generate_projects(all_text)
 
 
-        # -----------------------------
+        # ---------------------
         # Skill Dashboard
-        # -----------------------------
+        # ---------------------
 
         skills = result.get("skills", {})
 
@@ -97,15 +79,14 @@ if st.button("Analyze Learning Material"):
 
             df = pd.DataFrame(
                 list(skills.items()),
-                columns=["Skill", "Percentage"]
+                columns=["Skill","Percentage"]
             )
 
             fig = px.bar(
                 df,
                 x="Skill",
                 y="Percentage",
-                title="Skill Distribution",
-                color="Skill"
+                title="Skill Distribution"
             )
 
             st.subheader("Skill Dashboard")
@@ -113,59 +94,57 @@ if st.button("Analyze Learning Material"):
             st.plotly_chart(fig, use_container_width=True)
 
 
-        # -----------------------------
+        # ---------------------
         # Readiness Score
-        # -----------------------------
+        # ---------------------
 
         readiness = result.get("readiness_score", 50)
 
         st.subheader("Project Readiness Score")
 
-        st.progress(readiness / 100)
+        st.progress(readiness/100)
 
         st.write(f"Readiness Score: **{readiness}%**")
 
 
-        # -----------------------------
+        # ---------------------
         # Projects
-        # -----------------------------
+        # ---------------------
 
-        st.subheader("Recommended Projects")
+        st.subheader("Generated Projects")
 
-        projects = result.get("projects", [])
+        for p in result["projects"]:
 
-        for p in projects:
+            st.markdown(f"### {p['name']}")
 
-            st.markdown(f"### {p.get('name','Project')}")
+            st.write("Difficulty:", p["difficulty"])
 
-            st.write("**Difficulty:**", p.get("difficulty","Unknown"))
+            st.write("Tools:", ", ".join(p["tools"]))
 
-            tools = p.get("tools", [])
+            st.write("Description:", p["description"])
 
-            if tools:
-                st.write("**Tools:**", ", ".join(tools))
+            st.write("Documentation:")
+            st.write(p["documentation"])
 
-            st.write("**Description:**", p.get("description",""))
+            st.write("Architecture:")
+            st.code(p["architecture"])
 
-            st.write("**Architecture:**")
-            st.code(p.get("architecture",""))
+            st.write("Folder Structure:")
+            st.code(p["folder_structure"])
 
-            st.write("**Folder Structure:**")
-            st.code(p.get("folder_structure",""))
-
-            st.write("**Starter Code:**")
-            st.code(p.get("starter_code",""), language="python")
+            st.write("Starter Code:")
+            st.code(p["starter_code"], language="python")
 
             st.divider()
 
 
-        # -----------------------------
-        # PDF Generation
-        # -----------------------------
+        # ---------------------
+        # Download PDF
+        # ---------------------
 
-        pdf_file = create_pdf(str(result), "project_documentation.pdf")
+        pdf_file = create_pdf(str(result),"project_documentation.pdf")
 
-        with open(pdf_file, "rb") as file:
+        with open(pdf_file,"rb") as file:
 
             st.download_button(
                 "Download Project Documentation (PDF)",
@@ -175,16 +154,16 @@ if st.button("Analyze Learning Material"):
             )
 
 
-        # -----------------------------
-        # GitHub Repo Generator
-        # -----------------------------
+        # ---------------------
+        # Download GitHub Repo
+        # ---------------------
 
         repo_zip = create_repo_zip("ai_generated_project")
 
-        with open(repo_zip, "rb") as file:
+        with open(repo_zip,"rb") as file:
 
             st.download_button(
-                "Download GitHub Project Repository",
+                "Download GitHub Repository",
                 data=file,
                 file_name="ai_project_repo.zip",
                 mime="application/zip"
