@@ -3,31 +3,61 @@ import docx
 import requests
 from bs4 import BeautifulSoup
 from youtube_transcript_api import YouTubeTranscriptApi
+from pptx import Presentation
 
 
 def extract_text(file):
 
     text = ""
 
-    if file.type == "application/pdf":
+    try:
 
-        reader = PdfReader(file)
+        # -------------------------
+        # PDF
+        # -------------------------
+        if file.type == "application/pdf":
 
-        for page in reader.pages:
+            reader = PdfReader(file)
 
-            page_text = page.extract_text()
+            for page in reader.pages:
 
-            if page_text:
-                text += page_text + " "
+                page_text = page.extract_text()
 
-    elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+                if page_text:
+                    text += page_text + " "
 
-        doc = docx.Document(file)
 
-        for para in doc.paragraphs:
-            text += para.text + " "
+        # -------------------------
+        # WORD DOCX
+        # -------------------------
+        elif file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+
+            doc = docx.Document(file)
+
+            for para in doc.paragraphs:
+                text += para.text + " "
+
+
+        # -------------------------
+        # POWERPOINT
+        # -------------------------
+        elif file.type == "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+
+            presentation = Presentation(file)
+
+            for slide in presentation.slides:
+
+                for shape in slide.shapes:
+
+                    if hasattr(shape, "text"):
+                        text += shape.text + " "
+
+    except Exception as e:
+
+        text = ""
 
     return text
+
 
 
 def extract_from_url(url):
@@ -36,6 +66,9 @@ def extract_from_url(url):
 
     try:
 
+        # -------------------------
+        # YOUTUBE
+        # -------------------------
         if "youtube.com" in url or "youtu.be" in url:
 
             if "v=" in url:
@@ -48,16 +81,22 @@ def extract_from_url(url):
             for t in transcript:
                 text += t["text"] + " "
 
+
+        # -------------------------
+        # WEBSITE
+        # -------------------------
         else:
 
             response = requests.get(url, timeout=10)
 
             soup = BeautifulSoup(response.text, "html.parser")
 
-            for p in soup.find_all("p"):
+            paragraphs = soup.find_all("p")
+
+            for p in paragraphs:
                 text += p.get_text() + " "
 
-    except Exception as e:
+    except Exception:
 
         text = ""
 
