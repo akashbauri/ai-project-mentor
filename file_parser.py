@@ -44,7 +44,6 @@ def extract_text(file):
                         text += shape.text + " "
 
     except:
-
         pass
 
     return text
@@ -71,9 +70,9 @@ def extract_from_url(url):
 
         else:
 
-            response = requests.get(url)
+            page = requests.get(url)
 
-            soup = BeautifulSoup(response.text, "html.parser")
+            soup = BeautifulSoup(page.text, "html.parser")
 
             paragraphs = soup.find_all("p")
 
@@ -81,7 +80,6 @@ def extract_from_url(url):
                 text += p.get_text() + " "
 
     except:
-
         pass
 
     return text
