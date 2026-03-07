@@ -2,45 +2,79 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 
-from file_parser import extract_text
+from file_parser import extract_text, extract_from_url
 from ai_engine import generate_projects
 from pdf_generator import create_pdf
+from repo_generator import create_repo_zip
+
 
 st.title("AI Project Mentor")
 
-st.write("Upload learning material and generate real projects.")
+st.markdown("""
+### Created by **Akash Bauri**
 
-uploaded_file = st.file_uploader(
-    "Upload PDF or DOCX",
-    type=["pdf","docx"]
+AI Project Mentor converts learning material into **real projects**.
+
+Upload study material or paste a tutorial link and the system will:
+
+• Detect skills  
+• Generate project ideas  
+• Show skill dashboard  
+• Calculate **Project Readiness Score**  
+• Provide starter code  
+• Generate GitHub repository  
+• Export project documentation
+""")
+
+
+uploaded_files = st.file_uploader(
+    "Upload learning material (PDF or DOCX)",
+    type=["pdf","docx"],
+    accept_multiple_files=True
 )
 
-if uploaded_file:
+url_input = st.text_input("Paste a website or YouTube link")
 
-    text = extract_text(uploaded_file)
+all_text = ""
 
-    st.success("Material uploaded successfully")
+if uploaded_files:
 
-    if st.button("Analyze and Generate Projects"):
+    for file in uploaded_files:
 
-        result = generate_projects(text)
+        text = extract_text(file)
+
+        all_text += text + " "
+
+if url_input:
+
+    url_text = extract_from_url(url_input)
+
+    all_text += url_text
+
+
+if st.button("Analyze Material"):
+
+    if all_text == "":
+        st.warning("Please upload a file or paste a link.")
+
+    else:
+
+        with st.spinner("Analyzing learning material..."):
+
+            result = generate_projects(all_text)
 
         st.subheader("AI Generated Output")
 
         st.write(result)
 
-        # Example skill dashboard
         skills = {
             "Python":80,
             "Pandas":70,
-            "Machine Learning":50,
-            "Visualization":60
+            "Machine Learning":60,
+            "Visualization":50
         }
 
-        df = pd.DataFrame(
-            list(skills.items()),
-            columns=["Skill","Percentage"]
-        )
+        df = pd.DataFrame(list(skills.items()), columns=["Skill","Percentage"])
 
         fig = px.bar(df,x="Skill",y="Percentage")
 
@@ -48,13 +82,32 @@ if uploaded_file:
 
         st.plotly_chart(fig)
 
-        pdf_file = create_pdf(result,"project_plan.pdf")
+        readiness_score = 75
+
+        st.subheader("Project Readiness Score")
+
+        st.progress(readiness_score/100)
+
+        st.write(f"Readiness Score: {readiness_score}%")
+
+        pdf_file = create_pdf(result,"project_documentation.pdf")
 
         with open(pdf_file,"rb") as file:
 
             st.download_button(
                 "Download Project Documentation",
                 data=file,
-                file_name="project_plan.pdf",
+                file_name="project_documentation.pdf",
                 mime="application/pdf"
+            )
+
+        repo_zip = create_repo_zip("ai_generated_project")
+
+        with open(repo_zip,"rb") as file:
+
+            st.download_button(
+                "Download GitHub Repository",
+                data=file,
+                file_name="ai_project_repo.zip",
+                mime="application/zip"
             )
