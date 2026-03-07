@@ -4,6 +4,7 @@ pandas
 plotly
 PyPDF2
 python-docx
+python-pptx
 reportlab
 requests
 beautifulsoup4
