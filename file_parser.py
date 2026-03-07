@@ -39,7 +39,7 @@ def extract_from_url(url):
         if "youtube.com" in url or "youtu.be" in url:
 
             if "v=" in url:
-                video_id = url.split("v=")[-1]
+                video_id = url.split("v=")[1].split("&")[0]
             else:
                 video_id = url.split("/")[-1]
 
@@ -50,14 +50,15 @@ def extract_from_url(url):
 
         else:
 
-            page = requests.get(url, timeout=10)
+            response = requests.get(url, timeout=10)
 
-            soup = BeautifulSoup(page.text, "html.parser")
+            soup = BeautifulSoup(response.text, "html.parser")
 
             for p in soup.find_all("p"):
                 text += p.get_text() + " "
 
-    except:
-        pass
+    except Exception as e:
+
+        text = ""
 
     return text
